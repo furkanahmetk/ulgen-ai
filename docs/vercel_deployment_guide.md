@@ -1,4 +1,4 @@
-# Sentinel AI - Deployment Guide (Vercel & Render)
+# Sentinel AI - Vercel Deployment Guide
 
 Sentinel AI projesi iki ana parçadan oluşur: **Frontend** (Next.js) ve **Backend** (Express.js + AI Ajanı). 
 
@@ -8,7 +8,7 @@ Aşağıda tüm adımlar hem frontend hem de backend için ayrı ayrı açıklan
 
 ---
 
-## 🟢 Bölüm 1: Frontend'i Vercel'e Yükleme
+## 🟢 Adım 1: Frontend'i Vercel'e Yükleme
 
 1. Tüm kodlarının GitHub'da güncel olduğundan emin ol (`git push` işlemini tamamla).
 2. [Vercel](https://vercel.com) adresine git ve GitHub hesabınla giriş yap.
@@ -20,11 +20,13 @@ Vercel varsayılan olarak projenin ana dizinini arar, ancak bizim Next.js kodumu
 - **Root Directory** seçeneğinin yanındaki "Edit" butonuna tıkla.
 - Listeden **`frontend`** klasörünü seç ve kaydet.
 
-### 🔐 Environment Variables (Ortam Değişkenleri)
+---
+
+## 🔐 Adım 2: Environment Variables (Ortam Değişkenleri)
 > **💡 Önemli Soru:** "Direkt Deploy dedim, Environment Variable'ları baştan ayarlamadım. Sonradan ekleyebilir miyim?"
 > **Cevap:** Evet, kesinlikle! Vercel'de veya Render'da ayarlar kısmından bu değişkenleri sonradan ekleyip projeyi "Redeploy" (yeniden başlat) yapabilirsin. Başlangıçta girmeden deploy etmekte hiçbir sakınca yoktur.
 
-Aynı ekranda **"Environment Variables"** sekmesini aç ve kendi `.env.local` dosyasındaki ayarları buraya ekle:
+Aynı ekranda **"Environment Variables"** sekmesini aç ve aşağıdaki değerleri ekle. İstersen Vercel için hazırladığım `.env.vercel.example` dosyasının içeriğini direkt kopyalayıp buraya yapıştırabilirsin:
 
 | Key | Value |
 | :--- | :--- |
@@ -39,25 +41,34 @@ Değerleri ekledikten sonra **"Deploy"** butonuna bas!
 
 ---
 
-## 🟢 Bölüm 2: Backend'i Canlıya Alma
+## 🟢 Adım 3: CSPR.click Ayarlarını Güncelleme (Canlıya Aldıktan Sonra)
 
-Backend'i Vercel'e veya Render'a yükleyebilirsin. İşte ikisi için de ayrı adımlar:
+Frontend projen Vercel'de canlıya alındığında sana bir URL verilecek (örneğin: `https://sentinel-ai.vercel.app`).
+1. [CSPR.click Dashboard](https://cspr.click)'a geri dön.
+2. Oluşturduğun uygulamanın ayarlarına gir.
+3. **"Domains"** kısmındaki `example.com` veya `localhost` değerini sil.
+4. Vercel'in sana verdiği **canlı linki** (örn: `sentinel-ai.vercel.app`) buraya ekle ve kaydet. (Başına https:// koymadan yaz).
+
+Artık canlı sitene girdiğinde Casper cüzdanı sorunsuz bir şekilde açılacaktır!
+
+---
+
+## 🟢 Adım 4: Backend'i Çalıştırma
+
+Vercel'deki canlı siten, işlemlerini (AI raporlamaları) yapabilmek için senin backend'ine (`NEXT_PUBLIC_API_URL`) istek atacaktır. Backend'i canlıya almak için 3 seçeneğin var:
 
 ### Seçenek A: Backend'i Vercel'e Yükleme (Serverless API)
 Backend kodunu (Express) Vercel üzerinde çalıştırmak için aynı repo ile Vercel'de 2. bir proje açacağız.
-
 1. Vercel Dashboard'da tekrar **"Add New..." > "Project"** butonuna tıkla ve aynı Github reposunu tekrar "Import" et.
 2. Bu sefer **Root Directory** olarak listenden **`backend`** klasörünü seç ve kaydet.
-3. Framework Preset olarak **"Other"** veya **"Node.js"** seçili kalabilir.
-4. Build Command olarak `npm run build` (veya Vercel otomatik algılayacaktır) kullanıldığından emin ol.
-5. **Environment Variables** kısmına bilgisayarındaki `backend/.env` dosyasındaki tüm ayarları (Google API, CSPR Cloud API vb.) ekle. *(Bunu da tıpkı frontend gibi sonradan ayarlayıp redeploy edebilirsin).*
-6. **"Deploy"** butonuna bas. Vercel sana bir backend API linki verecektir (örn: `https://sentinel-ai-backend.vercel.app`).
-7. Bu linki kopyalayıp, Frontend Vercel projenin Settings kısmına giderek `NEXT_PUBLIC_API_URL` değişkeni olarak tanımla ve Frontend'i redeploy et.
+3. Build Command olarak `npm run build` kullanıldığından emin ol.
+4. **Environment Variables** kısmına `backend/.env.vercel.example` içindeki tüm ayarları (Google API, CSPR Cloud API vb.) kopyalayıp yapıştır.
+5. **"Deploy"** butonuna bas. Vercel sana bir backend API linki verecektir (örn: `https://sentinel-ai-backend.vercel.app`).
+6. Bu linki kopyalayıp, Frontend Vercel projenin Settings kısmına giderek `NEXT_PUBLIC_API_URL` değişkeni olarak tanımla ve Frontend'i redeploy et.
 *(Not: Ücretsiz Vercel hesabında Serverless fonksiyonların çalışma limiti 10 saniyedir. Gemini AI istekleri uzun sürer ve 10 saniyeyi geçerse Vercel 504 Timeout hatası verebilir. Eğer böyle bir sorun yaşarsan Seçenek B'ye geçebilirsin.)*
 
-### Seçenek B: Backend'i Render.com'a Yükleme (Alternatif - Önerilen)
+### Seçenek B: Backend'i Render.com'a Yükleme (Tamamen Canlı - Önerilen)
 AI ajanının (long-running process) timeout (zaman aşımı) sorunu yaşamadan her zaman açık kalması için çok sağlıklı bir alternatiftir:
-
 1. [Render.com](https://render.com)'a gir.
 2. "New Web Service" seç ve Github reponu bağla.
 3. **Root Directory:** `backend`
@@ -67,7 +78,7 @@ AI ajanının (long-running process) timeout (zaman aşımı) sorunu yaşamadan 
 7. Deploy et. Render sana bir link verecek (örn: `https://sentinel-backend.onrender.com`).
 8. Bu linki kopyala, Vercel'deki Frontend projenin ayarlarına git, `NEXT_PUBLIC_API_URL` değişkenini bu yeni link ile değiştir ve Frontend'i **Redeploy** yap.
 
-### Seçenek C: Backend'i Sadece Lokal Bilgisayarında Çalıştırmak (Test Amaçlı)
+### Seçenek C: Backend'i Kendi Bilgisayarında Çalıştırmak (Geliştirme için en kolayı)
 Sadece arayüzün canlıda nasıl durduğunu görmek ve hızlıca test etmek istiyorsan backend'i deploy etmene gerek yoktur:
 1. Bilgisayarında terminali aç.
 2. `cd backend`
@@ -75,14 +86,4 @@ Sadece arayüzün canlıda nasıl durduğunu görmek ve hızlıca test etmek ist
 4. Vercel'deki Frontend ayarlarında `NEXT_PUBLIC_API_URL` değişkenine `http://localhost:3001` değerini ver ve redeploy et.
 *(Not: Canlı bir web sitesinden (https), lokal bilgisayarına (http) istek atarken tarayıcı güvenlik politikaları gereği bazen "Mixed Content" veya CORS hatası alınabilir. Bunu aşmak için ngrok kullanabilir veya Seçenek A/B'ye geçebilirsin.)*
 
----
-
-## 🟢 Adım 3: CSPR.click Ayarlarını Güncelleme (Canlıya Aldıktan Sonra)
-
-Frontend projen Vercel'de canlıya alındığında sana bir URL verilecek (örneğin: `https://sentinel-ai.vercel.app`).
-1. [CSPR.click Dashboard](https://cspr.click)'a geri dön.
-2. Oluşturduğun uygulamanın ayarlarına gir.
-3. **"Domains"** kısmındaki `example.com` veya `localhost` değerini sil.
-4. Vercel'in sana verdiği **canlı linki** (örn: `sentinel-ai.vercel.app`) buraya ekle ve kaydet. (Başına https:// koymadan yaz).
-
-Artık canlı sitene girdiğinde Casper cüzdanı sorunsuz bir şekilde açılacak ve Sentinel AI ajanı tamamen otonom olarak çalışacaktır!
+İşte bu kadar! Artık Sentinel AI baştan uca canlıda!
