@@ -21,6 +21,9 @@ Vercel varsayılan olarak projenin ana dizinini arar, ancak bizim Next.js kodumu
 - Listeden **`frontend`** klasörünü seç ve kaydet.
 
 ### 🔐 Environment Variables (Ortam Değişkenleri)
+> **💡 Önemli Soru:** "Direkt Deploy dedim, Environment Variable'ları baştan ayarlamadım. Sonradan ekleyebilir miyim?"
+> **Cevap:** Evet, kesinlikle! Vercel'de veya Render'da ayarlar kısmından bu değişkenleri sonradan ekleyip projeyi "Redeploy" (yeniden başlat) yapabilirsin. Başlangıçta girmeden deploy etmekte hiçbir sakınca yoktur.
+
 Aynı ekranda **"Environment Variables"** sekmesini aç ve kendi `.env.local` dosyasındaki ayarları buraya ekle:
 
 | Key | Value |
@@ -32,9 +35,7 @@ Aynı ekranda **"Environment Variables"** sekmesini aç ve kendi `.env.local` do
 | `NEXT_PUBLIC_CASPER_NODE_URL` | `https://rpc.testnet.casperlabs.io/rpc` |
 
 Değerleri ekledikten sonra **"Deploy"** butonuna bas!
-
-> **💡 Soru:** "Direkt Deploy dedim, Environment Variable'ları ayarlamadım. Sonra ayarlasam olur mu?"
-> **Cevap:** Evet, kesinlikle olur! Vercel projenin sayfasına gidip üst menüden **Settings > Environment Variables** sekmesinden değişkenleri sonradan ekleyebilirsin. Ekledikten sonra değişikliklerin geçerli olması için üst menüden **Deployments** sekmesine gidip en üstteki (son) deployment'ın sağındaki üç noktaya (⋮) tıklayarak **"Redeploy"** yapman yeterlidir.
+(Eğer değişkenleri girmeden deploy dediysen, proje sayfasına gidip üst menüden **Settings > Environment Variables** kısmından sonradan ekleyip, **Deployments** sekmesinden en üstteki satırın sağındaki üç noktaya (⋮) tıklayarak **"Redeploy"** yapman yeterlidir.)
 
 ---
 
@@ -65,6 +66,14 @@ AI ajanının (long-running process) timeout (zaman aşımı) sorunu yaşamadan 
 6. **Environment Variables** kısmına bilgisayarındaki `backend/.env` içerisindeki tüm değerleri (Google API, CSPR Cloud vb.) tek tek ekle.
 7. Deploy et. Render sana bir link verecek (örn: `https://sentinel-backend.onrender.com`).
 8. Bu linki kopyala, Vercel'deki Frontend projenin ayarlarına git, `NEXT_PUBLIC_API_URL` değişkenini bu yeni link ile değiştir ve Frontend'i **Redeploy** yap.
+
+### Seçenek C: Backend'i Sadece Lokal Bilgisayarında Çalıştırmak (Test Amaçlı)
+Sadece arayüzün canlıda nasıl durduğunu görmek ve hızlıca test etmek istiyorsan backend'i deploy etmene gerek yoktur:
+1. Bilgisayarında terminali aç.
+2. `cd backend`
+3. `npm run dev` diyerek backend'i lokalde (3001 portunda) açık bırak.
+4. Vercel'deki Frontend ayarlarında `NEXT_PUBLIC_API_URL` değişkenine `http://localhost:3001` değerini ver ve redeploy et.
+*(Not: Canlı bir web sitesinden (https), lokal bilgisayarına (http) istek atarken tarayıcı güvenlik politikaları gereği bazen "Mixed Content" veya CORS hatası alınabilir. Bunu aşmak için ngrok kullanabilir veya Seçenek A/B'ye geçebilirsin.)*
 
 ---
 
