@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { payForPremiumService } from './casper';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,20 +20,8 @@ const getFreeInfo = (url: string) => {
     };
 };
 
-const buyPremiumService = (service: string, amount: string) => {
-    console.log(`[x402 Facilitator Mock] Paying ${amount} CSPR for ${service}...`);
-    // Here we use the x402 Facilitator to negotiate and sign the transaction via Casper Wallet
-    
-    if (service === 'Liquidity Check') {
-        return { liquidityScore: 85, rugPullRisk: "Low" };
-    }
-    if (service === 'Deed Check') {
-        return { realEstateVerified: true, owner: "Sentinel Corp" };
-    }
-    return {};
-};
 
-app.post('/api/investigate', (req, res) => {
+app.post('/api/investigate', async (req, res) => {
     const { url, type } = req.body;
     
     console.log(`Starting investigation for ${url} (Type: ${type})`);
@@ -46,12 +35,30 @@ app.post('/api/investigate', (req, res) => {
     let premiumData = {};
     if (freeData.confidence < 80) {
         logs.push("Agent: Confidence is too low. Need to buy premium intelligence via x402 Facilitator.");
-        if (type === 'RWA') {
-            logs.push("Agent: Purchasing 'Deed Check' via x402 Facilitator for 0.05 CSPR.");
-            premiumData = buyPremiumService('Deed Check', '0.05');
-        } else {
-            logs.push("Agent: Purchasing 'Liquidity Check' from CSPR.trade MCP via x402 Facilitator for 0.02 CSPR.");
-            premiumData = buyPremiumService('Liquidity Check', '0.02');
+        
+        // Use a dummy public key for the provider (this would normally be the service provider's public key)
+        const dummyProviderKey = '01e9d16ecba28b2db51a2f6fb39e8a5b28d6c8b09315dc4a415951d388e1bbdcf3';
+
+        try {
+            if (type === 'RWA') {
+                logs.push("Agent: Sending transaction for 'Deed Check' via x402 Facilitator for 0.05 CSPR.");
+                const deployHash = await payForPremiumService(0.05, dummyProviderKey);
+                logs.push(`Agent: Payment transaction broadcasted. Deploy Hash: ${deployHash}`);
+                
+                // Simulate getting the premium data after payment
+                premiumData = { realEstateVerified: true, owner: "Sentinel Corp", paymentDeployHash: deployHash };
+            } else {
+                logs.push("Agent: Sending transaction for 'Liquidity Check' from CSPR.trade MCP via x402 Facilitator for 0.02 CSPR.");
+                const deployHash = await payForPremiumService(0.02, dummyProviderKey);
+                logs.push(`Agent: Payment transaction broadcasted. Deploy Hash: ${deployHash}`);
+                
+                // Real fetching logic would go here:
+                // const tradeData = await fetch('https://api.cspr.trade/v1/liquidity...');
+                premiumData = { liquidityScore: 85, rugPullRisk: "Low", paymentDeployHash: deployHash };
+            }
+        } catch (error: any) {
+            logs.push(`Agent Error: Failed to execute payment transaction. ${error.message}`);
+            return res.status(500).json({ logs, error: error.message });
         }
     }
     

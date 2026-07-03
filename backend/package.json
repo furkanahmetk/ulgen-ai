@@ -5,13 +5,15 @@
   "scripts": {
     "test": "jest",
     "start": "node dist/server.js",
-    "build": "tsc"
+    "build": "tsc",
+    "generate-keys": "node scripts/generateKeys.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "casper-js-sdk": "^2.15.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
