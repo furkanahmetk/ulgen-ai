@@ -3,8 +3,8 @@
 import { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 
-const ClickProvider = dynamic(
-  () => import('@make-software/csprclick-ui').then((mod) => mod.ClickProvider),
+const ClickProvider: any = dynamic(
+  () => import('@make-software/csprclick-ui').then((mod) => mod.ClickProvider as any),
   { ssr: false }
 );
 
