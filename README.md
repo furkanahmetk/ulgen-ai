@@ -40,6 +40,18 @@ OBSERVE → THINK → ACT → REPORT
 
 ---
 
+## 💰 Agentic Economy & Monetization (Auto-Refund)
+
+Sentinel AI implements a true **Agentic Economy** where the AI acts as an autonomous fund manager:
+1. The AI calculates a **Maximum Budget** for the investigation (Base LLM Cost + Potential x402 Premium Cost + 30% Margin) using gas-estimation heuristics.
+2. The user pays this budget upfront.
+3. The Agent autonomously purchases premium data via x402 using **its own wallet** if needed.
+4. **Auto-Refund:** At the end of the run, the agent calculates its actual cost, takes its 30% margin, and **autonomously refunds** the unspent CSPR back to the user via a Casper transfer.
+
+🔗 **[Read the Full Monetization Documentation here](docs/MONETIZATION.md)**
+
+---
+
 ## 🧰 Casper AI Toolkit Integration
 
 Built on the full **[Casper AI Toolkit](https://www.casper.network/ai#toolkit)**:

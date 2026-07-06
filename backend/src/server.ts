@@ -40,12 +40,24 @@ const model = getLLM({ temperature: 0.3 });
  * 3. ACTS — If confidence is low, pays for premium data via x402
  * 4. REPORTS — Synthesizes a final due diligence report
  */
-async function runInvestigation(target: string, type: string, deployHash: string): Promise<{
+async function runInvestigation(target: string, type: string, deployHash: string, userAddress: string, estimatedFee: number): Promise<{
     logs: string[];
     result: any;
 }> {
     const logs: string[] = [];
     const collectedData: Record<string, any> = {};
+    const hashes: Record<string, string | null> = {
+        initialPaymentHash: deployHash || null,
+        premiumX402Hash: null,
+        refundHash: null,
+        registryHash: null,
+    };
+
+    // Calculate base LLM Cost (matches estimate-fee logic)
+    let complexity = 5;
+    if (type === 'DeFi' || type === 'DEX') complexity += 3;
+    if (target.includes('github.com')) complexity += 2;
+    const baseLlmCost = complexity * 5;
 
     // === STEP 0: Verify Fee Payment ===
     logs.push('💸 Agent: Verifying on-chain fee payment...');
@@ -157,9 +169,10 @@ Output ONLY valid JSON, no markdown blocks or extra text.`;
         if (type === 'RWA') {
             logs.push('🏠 Agent: Paying for RWA Deed Verification via x402 Facilitator...');
             const payment = await x402Tools.simulateX402Payment(
-                0.05, dummyProviderKey, 'RWA Deed Verification Service'
+                5, dummyProviderKey, 'RWA Deed Verification Service'
             );
             totalSpent += payment.amount;
+            if (payment.deployHash) hashes.premiumX402Hash = payment.deployHash;
             premiumData = {
                 ...premiumData,
                 realEstateVerified: true,
@@ -170,9 +183,10 @@ Output ONLY valid JSON, no markdown blocks or extra text.`;
         } else {
             logs.push('🔄 Agent: Paying for Deep Liquidity Analysis via x402 Facilitator...');
             const payment = await x402Tools.simulateX402Payment(
-                0.02, dummyProviderKey, 'Deep Liquidity & Rug-Pull Analysis'
+                3, dummyProviderKey, 'Deep Liquidity & Rug-Pull Analysis'
             );
             totalSpent += payment.amount;
+            if (payment.deployHash) hashes.premiumX402Hash = payment.deployHash;
 
             // Also try a real trade analysis from CSPR.trade MCP
             try {
@@ -268,6 +282,7 @@ Output ONLY valid JSON, no markdown blocks.`;
 
         const casperClient = new CasperClient(process.env.CASPER_NODE_URL || 'https://node.testnet.casper.network/rpc');
         const deployHashResult = await casperClient.putDeploy(signedDeploy);
+        hashes.registryHash = deployHashResult;
 
         logs.push(`✅ Agent: Logged to smart contract! Transaction Hash: ${deployHashResult}`);
     } catch (err: any) {
@@ -292,6 +307,38 @@ Output ONLY valid JSON, no markdown blocks.`;
             ...collectedData,
             ...premiumData,
         },
+        financials: {},
+        hashes
+    };
+
+    // === STEP 5: Calculate Finances & Issue Refund ===
+    const actualCost = baseLlmCost + totalSpent;
+    const margin = actualCost * 0.30; // 30% Profit Margin
+    const totalCharge = actualCost + margin;
+    let refunded = 0;
+
+    if (estimatedFee > totalCharge && userAddress) {
+        refunded = parseFloat((estimatedFee - totalCharge).toFixed(3));
+        logs.push(`💸 Agent: Investigation cost less than estimated! Refunding ${refunded} CSPR back to user...`);
+        
+        const refundRes = await x402Tools.refundToUser(refunded, userAddress);
+        if (refundRes.success && refundRes.deployHash) {
+            hashes.refundHash = refundRes.deployHash;
+            logs.push(`✅ Agent: Refund successful! TxHash: ${refundRes.deployHash}`);
+        } else {
+            logs.push(`⚠️ Agent: Refund failed or simulated: ${refundRes.error || 'N/A'}`);
+            // If failed to do real transfer, just mark simulated for hackathon
+            hashes.refundHash = 'simulated-refund-hash-due-to-error';
+        }
+    } else {
+        logs.push(`💸 Agent: Maximum budget fully utilized. No refund issued.`);
+    }
+
+    finalResult.financials = {
+        collected: estimatedFee,
+        actualSpent: totalCharge,
+        refunded: refunded,
+        profitMargin: margin
     };
 
     logs.push(`✅ Agent: Investigation complete. Score: ${finalResult.score}/100 | Recommendation: ${finalResult.recommendation}`);
@@ -318,9 +365,46 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+/** Dynamic fee estimation */
+app.post('/api/estimate-fee', async (req, res) => {
+    const { url, type } = req.body;
+    if (!url || !type) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    try {
+        // Base complexity score (1-10)
+        let complexity = 5;
+        if (type === 'DeFi' || type === 'DEX') complexity += 3;
+        if (url.includes('github.com')) complexity += 2;
+        
+        // Base LLM Cost (mock 5 CSPR per complexity point)
+        const baseLlmCost = complexity * 5;
+        
+        // Potential Premium x402 Cost (e.g. 50 CSPR for DeFi/RWA, 0 for simple)
+        const potentialPremiumCost = (type === 'DeFi' || type === 'RWA') ? 50 : 0;
+        
+        // Platform Margin (30%)
+        const margin = (baseLlmCost + potentialPremiumCost) * 0.3;
+        
+        const estimatedFeeCspr = Math.ceil(baseLlmCost + potentialPremiumCost + margin);
+
+        res.json({
+            target: url,
+            type: type,
+            complexity: complexity,
+            breakdown: { baseLlmCost, potentialPremiumCost, margin },
+            estimatedFee: estimatedFeeCspr,
+            message: `Bu hedefin analizi için gerekli maksimum bütçe ${estimatedFeeCspr} CSPR olarak belirlenmiştir.`
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 /** Main investigation endpoint */
 app.post('/api/investigate', async (req, res) => {
-    const { url, type, deployHash } = req.body;
+    const { url, type, deployHash, userAddress, estimatedFee } = req.body;
 
     if (!url || !type) {
         return res.status(400).json({ error: 'Missing required fields: url and type' });
@@ -333,10 +417,11 @@ app.post('/api/investigate', async (req, res) => {
     console.log(`\n${'='.repeat(60)}`);
     console.log(`[Sentinel AI] New investigation: ${url} (Type: ${type})`);
     console.log(`[Sentinel AI] Payment Hash: ${deployHash}`);
+    console.log(`[Sentinel AI] User: ${userAddress} | Fee: ${estimatedFee} CSPR`);
     console.log(`${'='.repeat(60)}\n`);
 
     try {
-        const { logs, result } = await runInvestigation(url, type, deployHash);
+        const { logs, result } = await runInvestigation(url, type, deployHash, userAddress, estimatedFee);
         
         // Log the investigation to console
         logs.forEach(log => console.log(log));

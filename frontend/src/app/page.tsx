@@ -19,6 +19,7 @@ export default function Home() {
   const [result, setResult] = useState<InvestigationResult | null>(null);
   const [activeAccount, setActiveAccount] = useState<{ address: string, provider: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [feeEstimate, setFeeEstimate] = useState<{ amount: number, message: string } | null>(null);
 
   useEffect(() => {
     const syncAccount = () => {
@@ -104,11 +105,33 @@ export default function Home() {
     localStorage.removeItem('cspr_last_active');
   };
 
+  const estimateFee = async () => {
+    if (!activeAccount) {
+      alert("Please connect your Casper Wallet first!");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:3001/api/estimate-fee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, type }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setFeeEstimate({ amount: data.estimatedFee, message: data.message });
+    } catch (err: any) {
+      alert(`Fee estimation failed: ${err.message}`);
+    }
+    setLoading(false);
+  };
+
   const startInvestigation = async () => {
     if (!activeAccount) {
       alert("Please connect your Casper Wallet first!");
       return;
     }
+    if (!feeEstimate) return;
 
     setLoading(true);
     setLogs([]);
@@ -116,7 +139,7 @@ export default function Home() {
 
     try {
       // 1. Construct the native Casper transfer for the Due Diligence fee
-      logs.push('💸 User: Requesting signature for 50 CSPR Due Diligence fee...');
+      logs.push(`💸 User: Requesting signature for ${feeEstimate.amount} CSPR Due Diligence fee...`);
       
       // The deployer wallet address where fees go
       const DESTINATION_WALLET = '0163d8A06Bab82776ec0fA0b38F1306e4E6a944468609AdF5c0F8F5Ad592Ef5d63'; 
@@ -128,8 +151,8 @@ export default function Home() {
         1800000 // 30 minutes TTL
       );
 
-      // 50 CSPR fee = 50 * 10^9 motes
-      const amount = 50_000_000_000;
+      // feeEstimate.amount CSPR = feeEstimate.amount * 10^9 motes
+      const amount = feeEstimate.amount * 1_000_000_000;
       const transferDeployItem = DeployUtil.ExecutableDeployItem.newTransfer(
         amount,
         CLPublicKey.fromHex(DESTINATION_WALLET),
@@ -157,7 +180,7 @@ export default function Home() {
       const res = await fetch('http://localhost:3001/api/investigate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, type, deployHash }),
+        body: JSON.stringify({ url, type, deployHash, userAddress: activeAccount.address, estimatedFee: feeEstimate.amount }),
       });
       
       const data = await res.json();
@@ -306,31 +329,59 @@ export default function Home() {
               type="text"
               placeholder="https://defi-protocol.xyz or contract address..."
               value={url}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUrl(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setUrl(e.target.value); setFeeEstimate(null); }}
             />
             <select
               className="select-field"
               value={type}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setType(e.target.value); setFeeEstimate(null); }}
             >
               <option value="DeFi">DeFi Protocol</option>
               <option value="RWA">Real World Asset</option>
             </select>
           </div>
 
+          {feeEstimate && (
+            <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(0, 240, 255, 0.05)', borderRadius: '8px', border: '1px solid rgba(0, 240, 255, 0.2)', color: 'var(--text-primary)', fontSize: '13px' }}>
+              <div style={{ marginBottom: '8px', color: 'var(--accent)' }}>ℹ️ {feeEstimate.message}</div>
+              {feeEstimate.breakdown && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'var(--text-secondary)', paddingLeft: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Base LLM Analysis Cost:</span>
+                    <span>{feeEstimate.breakdown.baseLlmCost} CSPR</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Premium Data Buffer (x402):</span>
+                    <span>{feeEstimate.breakdown.potentialPremiumCost} CSPR</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Platform Margin (30%):</span>
+                    <span>{feeEstimate.breakdown.margin.toFixed(2)} CSPR</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px', marginTop: '2px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                    <span>Total Maximum Budget:</span>
+                    <span>{feeEstimate.amount} CSPR</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             className="btn-primary"
             style={{ width: '100%' }}
             disabled={!url || loading}
-            onClick={startInvestigation}
+            onClick={feeEstimate ? startInvestigation : estimateFee}
           >
             {loading ? (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <span className="status-dot busy"></span>
-                Agent Analyzing...
+                Processing...
               </span>
+            ) : feeEstimate ? (
+              `⚡ PAY ${feeEstimate.amount} CSPR & START`
             ) : (
-              '⚡ INITIATE DUE DILIGENCE'
+              '⚡ ESTIMATE FEE'
             )}
           </button>
         </div>
@@ -371,11 +422,56 @@ export default function Home() {
 
           {/* Investigation Report */}
           <div className="glass-card" style={{ padding: '24px', minHeight: '350px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <span style={{ color: 'var(--accent)', fontSize: '14px' }}>◈</span>
-              <h2 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
-                Investigation Report
-              </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: 'var(--accent)', fontSize: '14px' }}>◈</span>
+                  <h2 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
+                    Investigation Report
+                  </h2>
+              </div>
+              {result && (
+                <button 
+                  onClick={() => {
+                    const mdContent = `
+# Sentinel AI - Investigation Report
+**Target:** ${url || 'Unknown'}
+**Type:** ${type || 'Unknown'}
+
+## 1. Risk Assessment
+- **Score:** ${result.score}/100
+- **Recommendation:** ${result.recommendation}
+
+## 2. Analysis Summary
+${result.reasoning}
+
+## 3. Financial Summary
+- **Collected Fee:** ${result.financials?.collected || '0'} CSPR
+- **Agent Spent:** ${result.financials?.actualSpent || '0'} CSPR
+- **Refunded:** ${result.financials?.refunded || '0'} CSPR
+- **Platform Margin:** ${result.financials?.profitMargin?.toFixed(2) || '0'} CSPR
+
+## 4. On-Chain Transparency (Hashes)
+- **Initial Fee:** ${result.hashes?.initialPaymentHash || 'N/A'}
+- **Premium Data (x402):** ${result.hashes?.premiumX402Hash || 'N/A'}
+- **Refund:** ${result.hashes?.refundHash || 'N/A'}
+- **Registry Log:** ${result.hashes?.registryHash || 'N/A'}
+
+---
+*Generated by Sentinel AI Autonomous Agent on Casper Network*
+                    `.trim();
+                    const blob = new Blob([mdContent], { type: 'text/markdown' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'sentinel-ai-report.md';
+                    link.click();
+                  }}
+                  style={{ background: 'var(--accent)', color: 'var(--bg-primary)', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                >
+                  📥 DOWNLOAD REPORT (.MD)
+                </button>
+              )}
             </div>
 
             {!result ? (
@@ -388,7 +484,7 @@ export default function Home() {
                 <span style={{ fontSize: '11px', opacity: 0.5 }}>Results will appear after investigation completes</span>
               </div>
             ) : (
-              <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div id="report-content" className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '16px', borderRadius: '8px', background: 'rgba(10, 14, 23, 0.9)' }}>
                 {/* Score */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                   <div className="score-ring animate-pulse-glow" style={{ color: getScoreColor(result.score) }}>
@@ -410,23 +506,65 @@ export default function Home() {
                     background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '14px',
                     borderLeft: '3px solid var(--accent)',
                   }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-                      CSPR Spent
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                      Financial Summary
                     </div>
-                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent)' }}>
-                      {result.spent} CSPR
-                    </div>
+                    {result.financials ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Collected Fee:</span>
+                          <span style={{ color: 'var(--text-primary)' }}>{result.financials.collected} CSPR</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Agent Spent:</span>
+                          <span style={{ color: 'var(--text-primary)' }}>{result.financials.actualSpent} CSPR</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px', marginTop: '2px' }}>
+                          <span>Refunded:</span>
+                          <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>{result.financials.refunded} CSPR</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent)' }}>
+                        {result.spent} CSPR
+                      </div>
+                    )}
                   </div>
                   <div style={{
                     background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '14px',
                     borderLeft: '3px solid var(--success)',
                   }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-                      On-Chain Record
+                      On-Chain Transparency
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--success)' }}>
-                      ✓ Logged to Registry
-                    </div>
+                    {result.hashes ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                        {result.hashes.initialPaymentHash && (
+                          <div title={result.hashes.initialPaymentHash}>
+                            <span style={{ color: 'var(--text-muted)' }}>FEE:</span> {result.hashes.initialPaymentHash.substring(0, 10)}...
+                          </div>
+                        )}
+                        {result.hashes.premiumX402Hash && (
+                          <div title={result.hashes.premiumX402Hash}>
+                            <span style={{ color: 'var(--text-muted)' }}>X402:</span> {result.hashes.premiumX402Hash.substring(0, 10)}...
+                          </div>
+                        )}
+                        {result.hashes.refundHash && (
+                          <div title={result.hashes.refundHash}>
+                            <span style={{ color: 'var(--success)' }}>REFUND:</span> {result.hashes.refundHash.substring(0, 10)}...
+                          </div>
+                        )}
+                        {result.hashes.registryHash && (
+                          <div title={result.hashes.registryHash}>
+                            <span style={{ color: 'var(--text-muted)' }}>LOG:</span> {result.hashes.registryHash.substring(0, 10)}...
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--success)' }}>
+                        ✓ Logged to Registry
+                      </div>
+                    )}
                   </div>
                 </div>
 

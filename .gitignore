@@ -44,3 +44,7 @@ yarn-error.log*
 target/
 **/*.rs.bk
 Cargo.lock
+backend.log
+frontend.log
+backend/test_refund.js
+backend/agent_keys/
