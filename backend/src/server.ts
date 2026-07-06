@@ -135,12 +135,18 @@ ${JSON.stringify(collectedData, null, 2)}
 Provide your analysis strictly as a valid JSON object with the following schema:
 {
   "confidence": <number between 0-100, representing safety score>,
-  "findings": ["finding 1", "finding 2"],
+  "findings": [
+    "<detailed finding 1 explaining specific metric evaluated>",
+    "<detailed finding 2 explaining tokenomic or contract risk>",
+    "<detailed finding 3 on liquidity or market data anomaly>"
+  ],
   "needsPremiumData": <boolean, true if data is insufficient or looks suspicious>,
   "recommendation": <"SAFE" | "CAUTION" | "INVEST" | "SCAM">,
-  "reasoning": "<string explaining your decision>"
+  "reasoning": "<A comprehensive, multi-paragraph executive summary detailing exactly how you arrived at this decision. Explain the evaluated criteria, how specific data anomalies influenced your score, and provide actionable advice.>"
 }
 
+Ensure your 'findings' array contains at least 4-6 highly technical bullet points.
+Ensure your 'reasoning' is highly detailed and reads like a professional audit report.
 Output ONLY valid JSON, no markdown blocks or extra text.`;
 
         llmPromptTrace = prompt;
@@ -224,12 +230,19 @@ Please reconsider your confidence score, recommendation, and reasoning based on 
 Output your updated analysis strictly as a valid JSON object with the exact same schema:
 {
   "confidence": <number between 0-100, representing safety score>,
-  "findings": ["finding 1", "finding 2"],
+  "findings": [
+    "<detailed finding 1 explaining specific metric evaluated>",
+    "<detailed finding 2 explaining tokenomic or contract risk>",
+    "<detailed finding 3 on liquidity or market data anomaly>"
+  ],
   "needsPremiumData": <boolean>,
   "recommendation": <"SAFE" | "CAUTION" | "INVEST" | "SCAM">,
-  "reasoning": "<string explaining your decision>"
+  "reasoning": "<A comprehensive, multi-paragraph executive summary detailing exactly how you arrived at this decision. Explain the evaluated criteria, how specific data anomalies influenced your score, and provide actionable advice.>"
 }
-Output ONLY valid JSON, no markdown blocks.`;
+
+Ensure your 'findings' array contains at least 4-6 highly technical bullet points.
+Ensure your 'reasoning' is highly detailed and reads like a professional audit report.
+Output ONLY valid JSON, no markdown blocks or extra text.`;
 
             const response = await model.invoke(reAnalyzePrompt);
             let content = response.content as string;

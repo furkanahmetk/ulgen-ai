@@ -79,8 +79,8 @@ cargo run --bin deploy
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `PORT` | Backend port | `3001` |
-| `GOOGLE_API_KEY` | Google Gemini AI API key | `AQ.Ab8RN6K...` |
-| `CSPR_CLOUD_API_KEY` | CSPR.cloud API key | `019f29ef-...` |
+| `GOOGLE_API_KEY` | Google Gemini AI API key | `your_google_key` |
+| `CSPR_CLOUD_API_KEY` | CSPR.cloud API key | `your_cspr_key` |
 | `CASPER_MCP_URL` | Casper MCP endpoint | `https://mcp.testnet.cspr.cloud/mcp` |
 | `CSPR_TRADE_MCP_URL` | CSPR.trade MCP endpoint | `https://mcp.cspr.trade/mcp` |
 | `X402_FACILITATOR_URL` | x402 payment facilitator | `https://x402-facilitator.cspr.cloud` |

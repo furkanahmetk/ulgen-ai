@@ -40,12 +40,12 @@ OBSERVE → THINK → ACT → REPORT
 
 ---
 
-## 💰 Agentic Economy & Monetization (Auto-Refund)
+## 💰 Agentic Economy & Monetization (Ultimate Hybrid x402)
 
 Sentinel AI implements a true **Agentic Economy** where the AI acts as an autonomous fund manager:
 1. The AI calculates a **Maximum Budget** for the investigation (Base LLM Cost + Potential x402 Premium Cost + 30% Margin) using gas-estimation heuristics.
 2. The user pays this budget upfront.
-3. The Agent autonomously purchases premium data via x402 using **its own wallet** if needed.
+3. **Ultimate Hybrid x402 Pipeline**: The Agent attempts to purchase premium data by dynamically generating an EIP-712 payload and hitting the official `x402-facilitator.cspr.cloud/verify` HTTP API. If strict token/signature verification fails natively in NodeJS, it executes a **Graceful Fallback**—falling back to an On-Chain Native Transfer to guarantee the service is purchased.
 4. **Auto-Refund:** At the end of the run, the agent calculates its actual cost, takes its 30% margin, and **autonomously refunds** the unspent CSPR back to the user via a Casper transfer.
 
 🔗 **[Read the Full Monetization Documentation here](docs/MONETIZATION.md)**
