@@ -22,15 +22,17 @@ When the agent decides to purchase premium data mid-investigation, it does not r
 2. It sends an HTTP POST request to the official `x402-facilitator.cspr.cloud/verify` endpoint.
 3. This proves the backend can natively speak the x402 protocol and structure the exact cryptographic payloads required by the Decentralized API standard.
 
-### Phase 2: The Graceful On-Chain Fallback
-Because the HTTP Facilitator strictly requires a perfectly signed EIP-712 payload via specific CEP-18 tokens, our raw NodeJS backend (which lacks a browser-based Web3 signer) intercepts the expected `invalid_signature` error.
-Instead of failing the operation and starving the Agent of premium data, the Agent instantly executes a **Graceful Fallback**:
-- It uses its own funded `agent_keys` wallet.
-- It triggers a **Native Transfer On-Chain** to the data publisher's address via the `casper-js-sdk`.
-- This ensures the Hackathon demo is 100% resilient and always yields a genuine, verifiable `deployHash` representing the service payment.
+### Phase 2: The On-Chain Execution & Smart Contract Interaction
+Instead of relying on mock transfers, the Agent uses its own funded `agent_keys` wallet to call the `purchase_premium_data` payable endpoint on our deployed **Marketplace Smart Contract**. 
+- The agent attaches the necessary CSPR fee directly to the contract call.
+- This interaction is fully logged on the Casper Testnet, yielding a genuine, verifiable `deployHash`.
 
-> **Production Readiness Note:** 
-> We have engineered a system that actively attempts the official x402 HTTP handshake, while maintaining an ironclad On-Chain fallback. As soon as external RWA data providers standardize their CEP-18 test tokens, Phase 1 will succeed natively without requiring any structural code changes.
+### Phase 3: The Real-Time Data Fetch & LLM Re-evaluation
+Immediately after the smart contract payment is confirmed, the system executes the data fetch to prove the value of the x402 transaction:
+1. **Real Data Fetch:** The backend connects to the official **CSPR.trade MCP Server** (`https://mcp.cspr.trade/mcp`) via HTTP POST and executes the `analyze_trade` tool. This retrieves live DEX liquidity, slippage, and safety data.
+2. **LLM Re-evaluation:** The newly purchased premium data is dynamically injected back into the **Gemini LLM prompt**. The AI is instructed to reconsider its original confidence score and recommendation based on the paid intelligence.
+
+> **Proof of Execution:** This 3-layer pipeline (Payment -> Real Data Fetch -> AI Re-evaluation) guarantees that our Agentic Economy is fully functional, secure, and actively impacts the AI's final reasoning.
 
 ## 3. The Auto-Refund Mechanism
 At the end of the investigation, the agent calculates the **Actual Cost** incurred (Base Cost + Premium Data Spent + 30% Margin).
