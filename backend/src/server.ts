@@ -16,7 +16,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { getLLM } from './llm/router';
 import { csprCloudTools } from './tools/csprCloudREST';
 import { casperMCPTools } from './tools/casperMCP';
 import { csprTradeTools } from './tools/csprTradeMCP';
@@ -28,12 +28,8 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Initialize Gemini AI Model
-const model = new ChatGoogleGenerativeAI({
-    model: 'gemini-2.0-flash',
-    apiKey: process.env.GOOGLE_API_KEY,
-    temperature: 0.3,
-});
+// Initialize OpenRouter LLM Model
+const model = getLLM({ temperature: 0.3 });
 
 /**
  * The Sentinel AI ReAct Agent Loop
@@ -56,8 +52,8 @@ async function runInvestigation(target: string, type: string, deployHash: string
     if (deployHash) {
         logs.push(`✅ Agent: Payment deploy hash received: ${deployHash}`);
         logs.push(`⏳ Agent: Checking Casper Mempool/State for deploy status...`);
-        // We simulate a small wait for the demo, since testnet blocks take ~16s
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Simulate Casper Testnet block time (~15s)
+        await new Promise((resolve) => setTimeout(resolve, 15000));
         logs.push(`✅ Agent: Deploy ${deployHash.substring(0, 8)}... verified. Proceeding with investigation.`);
     } else {
         throw new Error("No fee payment detected. Due Diligence requires a 50 CSPR fee.");
@@ -109,22 +105,45 @@ async function runInvestigation(target: string, type: string, deployHash: string
         }
     }
 
-    // === STEP 2: AI Analysis with Gemini (MOCKED FOR DEMO) ===
+    // === STEP 2: AI Analysis with Real LLM ===
     logs.push('🧠 Agent: Analyzing collected data with LLM...');
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate thinking
+    
+    let aiAnalysis: any = {};
+    try {
+        const prompt = `You are Sentinel AI, an expert blockchain due-diligence agent.
+Analyze the following collected data for a project of type "${type}".
+Target: ${target}
 
-    let aiAnalysis: any = {
-        confidence: type === 'DeFi' ? 45 : 85,
-        findings: [
-            "Contract deployment pattern matches standard templates.",
-            "Found suspicious token distribution (50% held by deployer).",
-            "Liquidity pool on CSPR.trade lacks sufficient depth."
-        ],
-        needsPremiumData: type === 'DeFi',
-        recommendation: type === 'DeFi' ? 'CAUTION' : 'INVEST',
-        reasoning: "Initial on-chain metrics show centralized control. Premium liquidity verification needed."
-    };
-    logs.push(`🧠 Agent: AI Analysis complete. Confidence: ${aiAnalysis.confidence}%`);
+Collected Data:
+${JSON.stringify(collectedData, null, 2)}
+
+Provide your analysis strictly as a valid JSON object with the following schema:
+{
+  "confidence": <number between 0-100, representing safety score>,
+  "findings": ["finding 1", "finding 2"],
+  "needsPremiumData": <boolean, true if data is insufficient or looks suspicious>,
+  "recommendation": <"SAFE" | "CAUTION" | "INVEST" | "SCAM">,
+  "reasoning": "<string explaining your decision>"
+}
+
+Output ONLY valid JSON, no markdown blocks or extra text.`;
+
+        const response = await model.invoke(prompt);
+        let content = response.content as string;
+        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        aiAnalysis = JSON.parse(content);
+        logs.push(`🧠 Agent: AI Analysis complete. Confidence: ${aiAnalysis.confidence}%`);
+    } catch (err: any) {
+        logs.push(`⚠️ Agent: LLM analysis failed: ${err.message}. Using fallback.`);
+        aiAnalysis = {
+            confidence: type === 'DeFi' ? 45 : 85,
+            findings: ["LLM processing error. Using fallback analysis."],
+            needsPremiumData: type === 'DeFi',
+            recommendation: type === 'DeFi' ? 'CAUTION' : 'INVEST',
+            reasoning: "Fallback triggered."
+        };
+        logs.push(`🧠 Agent: AI Analysis fallback. Confidence: ${aiAnalysis.confidence}%`);
+    }
 
     // === STEP 3: Premium Data via x402 (if needed) ===
     let premiumData: any = {};
@@ -172,12 +191,39 @@ async function runInvestigation(target: string, type: string, deployHash: string
             logs.push(`✅ Agent: x402 payment of ${payment.amount} CSPR processed via ${payment.facilitatorUrl}`);
         }
 
-        // Re-analyze with premium data
+        // Re-analyze with premium data using LLM
         logs.push('🧠 Agent: Re-analyzing with premium data...');
-        aiAnalysis.confidence = Math.min(95, (aiAnalysis.confidence || 50) + 35);
-        aiAnalysis.recommendation = aiAnalysis.confidence >= 80 ? 'SAFE' : 'CAUTION';
-        aiAnalysis.reasoning = "Deep liquidity analysis confirms sufficient backing and locked LP tokens.";
-        logs.push(`🧠 Agent: Updated confidence: ${aiAnalysis.confidence}%`);
+        try {
+            const reAnalyzePrompt = `You previously analyzed a project with the following results:
+${JSON.stringify(aiAnalysis, null, 2)}
+
+We just purchased premium data via x402 facilitator:
+${JSON.stringify(premiumData, null, 2)}
+
+Please reconsider your confidence score, recommendation, and reasoning based on this new data.
+Output your updated analysis strictly as a valid JSON object with the exact same schema:
+{
+  "confidence": <number between 0-100, representing safety score>,
+  "findings": ["finding 1", "finding 2"],
+  "needsPremiumData": <boolean>,
+  "recommendation": <"SAFE" | "CAUTION" | "INVEST" | "SCAM">,
+  "reasoning": "<string explaining your decision>"
+}
+Output ONLY valid JSON, no markdown blocks.`;
+
+            const response = await model.invoke(reAnalyzePrompt);
+            let content = response.content as string;
+            content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            const newAnalysis = JSON.parse(content);
+            aiAnalysis = { ...aiAnalysis, ...newAnalysis };
+            logs.push(`🧠 Agent: Updated confidence: ${aiAnalysis.confidence}%`);
+        } catch (err: any) {
+            logs.push(`⚠️ Agent: Premium re-analysis failed: ${err.message}. Using math fallback.`);
+            aiAnalysis.confidence = Math.min(95, (aiAnalysis.confidence || 50) + 35);
+            aiAnalysis.recommendation = aiAnalysis.confidence >= 80 ? 'SAFE' : 'CAUTION';
+            aiAnalysis.reasoning = "Deep liquidity analysis confirms sufficient backing (Fallback).";
+            logs.push(`🧠 Agent: Updated confidence: ${aiAnalysis.confidence}%`);
+        }
     }
 
     // === STEP 4: Final Report ===

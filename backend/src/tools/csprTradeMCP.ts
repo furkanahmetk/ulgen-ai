@@ -1,18 +1,54 @@
 /**
  * CSPR.trade MCP Tool
  * Connects to the public CSPR.trade MCP server for DEX operations.
- * No API key required — 22 public tools available.
- * 
- * Key tools: get_tokens, get_quote, analyze_trade, get_pair_price_history,
- * get_token_balance, get_portfolio_value, get_swap_history, etc.
  */
 
 const CSPR_TRADE_MCP_URL = process.env.CSPR_TRADE_MCP_URL || 'https://mcp.cspr.trade/mcp';
 
+let mcpSessionId: string | null = null;
+
+async function getMcpSessionId(): Promise<string> {
+    if (mcpSessionId) return mcpSessionId;
+
+    const initBody = {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+            protocolVersion: '2024-11-05',
+            capabilities: {},
+            clientInfo: { name: 'sentinel-ai-backend', version: '1.0.0' }
+        }
+    };
+
+    const res = await fetch(CSPR_TRADE_MCP_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/event-stream'
+        },
+        body: JSON.stringify(initBody),
+    });
+
+    if (!res.ok) {
+        throw new Error(`CSPR.trade MCP init error ${res.status}: ${await res.text()}`);
+    }
+
+    const sessionId = res.headers.get('mcp-session-id');
+    if (!sessionId) {
+        throw new Error('CSPR.trade MCP did not return an mcp-session-id header');
+    }
+
+    mcpSessionId = sessionId;
+    return sessionId;
+}
+
 /**
- * Call a tool on the CSPR.trade MCP Server via Streamable HTTP.
+ * Call a tool on the CSPR.trade MCP Server via Streamable HTTP (custom session headers).
  */
 export async function callTradeMCPTool(toolName: string, args: Record<string, any>): Promise<any> {
+    const sessionId = await getMcpSessionId();
+
     const requestBody = {
         jsonrpc: '2.0',
         id: Date.now(),
@@ -27,6 +63,8 @@ export async function callTradeMCPTool(toolName: string, args: Record<string, an
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json, text/event-stream',
+            'mcp-session-id': sessionId
         },
         body: JSON.stringify(requestBody),
     });
@@ -35,7 +73,44 @@ export async function callTradeMCPTool(toolName: string, args: Record<string, an
         throw new Error(`CSPR.trade MCP error ${res.status}: ${await res.text()}`);
     }
 
-    return res.json();
+    const responseText = await res.text();
+    
+    // Parse SSE (Server-Sent Events) lines
+    const lines = responseText.split('\n');
+    let parsedJson: any = null;
+
+    for (const line of lines) {
+        if (line.startsWith('data: ')) {
+            try {
+                parsedJson = JSON.parse(line.substring(6).trim());
+                if (parsedJson && (parsedJson.result || parsedJson.error)) {
+                    break; // Found the JSON-RPC response
+                }
+            } catch (e) {
+                // Ignore partial or invalid JSON lines in the stream
+            }
+        }
+    }
+
+    // Fallback if not an SSE stream (pure JSON)
+    if (!parsedJson) {
+        try {
+            parsedJson = JSON.parse(responseText);
+        } catch (e) {
+            throw new Error(`Failed to parse MCP response. Raw text: ${responseText}`);
+        }
+    }
+
+    // Standard MCP tools/call returns {"result": {"content": [{text: "..."}]}}
+    if (parsedJson?.result?.content?.[0]?.text) {
+        try {
+            return JSON.parse(parsedJson.result.content[0].text);
+        } catch(e) {
+            return parsedJson.result.content[0].text;
+        }
+    }
+
+    return parsedJson;
 }
 
 /** Get all available tokens on CSPR.trade with optional fiat pricing */

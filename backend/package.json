@@ -13,7 +13,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@langchain/google-genai": "^2.2.0",
+    "@langchain/openai": "^1.5.3",
+    "@make-software/cspr-trade-mcp-sdk": "^0.6.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "casper-js-sdk": "^2.15.3",
     "cors": "^2.8.6",
