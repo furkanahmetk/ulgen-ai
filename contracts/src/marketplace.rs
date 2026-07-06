@@ -41,6 +41,14 @@ impl Marketplace {
         self.purchases.set(&key, attached_value);
     }
 
+    #[odra(payable)]
+    pub fn purchase_premium_data(&mut self, data_type: String) {
+        let attached_value = self.env().attached_value();
+        let caller = self.env().caller().to_string();
+        let key = format!("premium_{}_{}", caller, data_type);
+        self.purchases.set(&key, attached_value);
+    }
+
     pub fn withdraw(&mut self) {
         let caller = self.env().caller();
         let owner = self.owner.get().unwrap_or_else(|| self.env().revert(Error::Uninitialized));

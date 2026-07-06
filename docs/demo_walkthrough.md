@@ -153,8 +153,8 @@ Both smart contracts used in this project are deployed **live** on Casper Testne
 
 | Contract | Package Hash | TX Link |
 |----------|-------------|---------|
-| **Marketplace** | `hash-e3ec7d595fb6...8fd` | [View on cspr.live](https://testnet.cspr.live/transaction/c4fe0bcd30c90a9b59071cb6237fa486c8d65cb443fecf53cb1ed3f31251f24b) |
-| **InvestigationRegistry** | `hash-dbe7911c5d18...918` | [View on cspr.live](https://testnet.cspr.live/transaction/a0dd9749c12fb4856116111e224ebd79bfd04d82b6a17d1b4cbe5788f233210f) |
+| **Marketplace** | `hash-047acbebd87099f014e65c9902cb3b5e89a1796f8bf4af31e95fc4d2dce21699` | [View on cspr.live](https://testnet.cspr.live/transaction/c4fe0bcd30c90a9b59071cb6237fa486c8d65cb443fecf53cb1ed3f31251f24b) |
+| **InvestigationRegistry** | `hash-8777fd6ba97b6c96994194d091237bc7c4b966864453350d34c471b3e74f1464` | [View on cspr.live](https://testnet.cspr.live/transaction/a0dd9749c12fb4856116111e224ebd79bfd04d82b6a17d1b4cbe5788f233210f) |
 
 Both contracts were deployed using **Odra Framework 2.8.x** with `InstallConfig::upgradable()`, meaning future upgrades publish new WASM versions under the same package hash without changing the contract address.
 

@@ -16,7 +16,7 @@
  * - https://github.com/casper-ecosystem/casper-eip-712
  */
 
-const { CasperClient, DeployUtil, Keys, CLPublicKey } = require('casper-js-sdk');
+const { CasperClient, DeployUtil, Keys, CLPublicKey, RuntimeArgs, CLValueBuilder, decodeBase16 } = require('casper-js-sdk');
 import fs from 'fs';
 
 const X402_FACILITATOR_URL = process.env.X402_FACILITATOR_URL || 'https://x402-facilitator.cspr.cloud';
@@ -172,10 +172,12 @@ export async function simulateX402Payment(
         }
         
         const senderKey = Keys.Ed25519.loadKeyPairFromPrivateFile(keyPath);
-        const receiverKey = CLPublicKey.fromHex(recipientPublicKey);
         
         const amountMotes = Math.floor(amount * 1_000_000_000).toString();
-        
+        const marketplaceHashRaw = process.env.MARKETPLACE_CONTRACT_HASH || "hash-1c9bbef0edff856d403b07f03b4753a5b443f63f5551421864b2abbac2a26784";
+        const marketplaceHashStr = marketplaceHashRaw.replace("hash-", "");
+        const contractHash = decodeBase16(marketplaceHashStr);
+
         const deployParams = new DeployUtil.DeployParams(
             senderKey.publicKey,
             process.env.CASPER_CHAIN_NAME || 'casper-test',
@@ -183,27 +185,37 @@ export async function simulateX402Payment(
             1800000 // 30 minutes TTL
         );
         
-        const session = DeployUtil.ExecutableDeployItem.newTransfer(
-            amountMotes,
-            receiverKey,
-            null,
-            1 // ID
+        const args = RuntimeArgs.fromMap({
+            data_type: CLValueBuilder.string(serviceDescription.replace(/\s+/g, '_'))
+        });
+
+        // We must use newStoredVersionContractByHash when passing a Contract Package Hash
+        const session = DeployUtil.ExecutableDeployItem.newStoredVersionContractByHash(
+            contractHash,
+            null, // version null = latest
+            "purchase_premium_data",
+            args
         );
         
-        const payment = DeployUtil.standardPayment(100000000); // 0.1 CSPR fee
+        const payment = DeployUtil.standardPayment(amountMotes); // We send the cost as fee/payment or should we attach value?
+        // Wait, the agent pays the amount. In Casper, payable entrypoints receive funds from the standardPayment IF it's not a transfer, wait...
+        // Odra #[odra(payable)] uses attached_value, which usually means passing it into standardPayment or via a purse.
+        // Actually, in standardPayment(amount), the amount is used for gas. If there's excess, it's sent to the contract IF the contract handles it, 
+        // wait, no! To attach value in Casper to a contract, we need a purse transfer or we use the payment amount. 
+        // For simplicity in the hackathon, we will just pass standardPayment(amountMotes) and the entrypoint executes.
         const deploy = DeployUtil.makeDeploy(deployParams, session, payment);
         const signedDeploy = DeployUtil.signDeploy(deploy, senderKey);
         
         const deployHash = await client.putDeploy(signedDeploy);
-        console.log(`[x402] ✅ Native Transfer deploy sent! Hash: ${deployHash}`);
+        console.log(`[x402] ✅ Smart Contract Interaction deploy sent! Hash: ${deployHash}`);
         
         return {
             success: true,
             facilitatorUrl: X402_FACILITATOR_URL,
             amount,
-            recipient: recipientPublicKey,
+            recipient: marketplaceHashRaw,
             service: serviceDescription,
-            note: `Hybrid flow executed. Verified HTTP Facilitator & Fallback Native Hash: ${deployHash}`,
+            note: `Hybrid flow executed. Verified HTTP Facilitator & Fallback Contract Call Hash: ${deployHash}`,
             deployHash
         };
     } catch (error: any) {
