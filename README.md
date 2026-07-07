@@ -95,20 +95,44 @@ git clone https://github.com/your-username/sentinel-ai.git
 cd sentinel-ai
 ```
 
-### 2. Backend
+### 2. Environment Setup
+Before starting, ensure you have your `.env` files set up.
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.local.example frontend/.env.local
+```
+*(Fill in your API keys in both files — see Configuration below)*
+
+### 3. Installation & Running (Using Makefile - Recommended)
+You can use the provided `Makefile` to quickly set up and run the entire project with single commands from the root directory.
+
+```bash
+# View system requirements (Node.js, npm, etc.)
+cat requirements.txt
+
+# (Optional) If any Python utilities are added in the future:
+# pip install -r requirements.txt
+
+make install    # Installs dependencies for both backend and frontend
+make build      # Builds both backend and frontend
+make dev        # Starts both backend and frontend simultaneously
+# OR for production: make start
+```
+
+### Alternative: Manual Setup
+
+#### Backend
 ```bash
 cd backend
 npm install
-cp .env.example .env      # Fill in your API keys — see Configuration below
 npm run build
 npm start                  # → http://localhost:3001
 ```
 
-### 3. Frontend
+#### Frontend
 ```bash
 cd frontend
 npm install
-cp .env.local.example .env.local
 npm run dev                # → http://localhost:3000
 ```
 
@@ -187,6 +211,12 @@ For detailed component design, data flow diagrams, and module descriptions, see 
 
 ## 🧪 Testing
 
+You can easily run both frontend and backend tests from the root directory using the `Makefile`:
+```bash
+make test
+```
+
+Alternatively, you can run tests for individual components manually:
 ```bash
 # Smart contract unit tests
 cd contracts && cargo test

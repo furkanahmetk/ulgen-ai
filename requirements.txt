@@ -1,0 +1,19 @@
+# Sentinel AI - System Requirements
+# 
+# NOT: Bu proje Node.js tabanlıdır (Python değil). 
+# Bu nedenle bağımlılıklar "package.json" üzerinden npm ile yönetilir.
+# 
+# Projeyi tek komutta kurmak için Makefile kullanabilirsiniz:
+# Komut: make install
+# 
+# --- Gerekli Sistem Bağımlılıkları ---
+node>=20.0.0
+npm>=10.0.0
+make>=4.0
+
+# --- Manuel Kurulum (Alternatif) ---
+# Backend için:
+# cd backend && npm install
+# 
+# Frontend için:
+# cd frontend && npm install
