@@ -1,4 +1,4 @@
-# 🛡️ Sentinel AI: Autonomous Due Diligence Agent
+# 🛡️ Ulgen AI: Autonomous Due Diligence Agent
 
 > **"Don't invest first. Investigate first."**
 
@@ -8,7 +8,7 @@
 [![Odra Framework](https://img.shields.io/badge/Odra-Smart%20Contracts-orange?style=for-the-badge)](https://odra.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-Sentinel AI is an **autonomous, agentic due diligence system** built for the **Casper Agentic Buildathon**. It protects DeFi and RWA (Real World Assets) investors by autonomously researching projects before capital is deployed — no human oversight required.
+Ulgen AI is an **autonomous, agentic due diligence system** built for the **Casper Agentic Buildathon**. It protects DeFi and RWA (Real World Assets) investors by autonomously researching projects before capital is deployed — no human oversight required.
 
 ---
 
@@ -42,7 +42,7 @@ OBSERVE → THINK → ACT → REPORT
 
 ## 💰 Agentic Economy & Monetization (Ultimate Hybrid x402)
 
-Sentinel AI implements a true **Agentic Economy** where the AI acts as an autonomous fund manager:
+Ulgen AI implements a true **Agentic Economy** where the AI acts as an autonomous fund manager:
 1. The AI calculates a **Maximum Budget** for the investigation (Base LLM Cost + Potential x402 Premium Cost + 30% Margin) using gas-estimation heuristics.
 2. The user pays this budget upfront.
 3. **Ultimate Hybrid x402 Pipeline**: The Agent attempts to purchase premium data by dynamically generating an EIP-712 payload and hitting the official `x402-facilitator.cspr.cloud/verify` HTTP API. If strict token/signature verification fails natively in NodeJS, it executes a **Graceful Fallback**—falling back to an On-Chain Native Transfer to guarantee the service is purchased.
@@ -91,8 +91,8 @@ Both contracts are deployed as **upgradeable** via Odra Framework 2.8.x — new 
 
 ### 1. Clone
 ```bash
-git clone https://github.com/your-username/sentinel-ai.git
-cd sentinel-ai
+git clone https://github.com/furkanahmetk/ulgen-ai.git
+cd ulgen-ai
 ```
 
 ### 2. Environment Setup
@@ -167,7 +167,7 @@ AGENT_SECRET_KEY_PATH=./keys/secret_key.pem
 **Frontend (`frontend/.env.local`):**
 ```env
 NEXT_PUBLIC_CSPR_CLICK_APP_ID=your_app_id
-NEXT_PUBLIC_CSPR_CLICK_APP_NAME="Sentinel AI"
+NEXT_PUBLIC_CSPR_CLICK_APP_NAME="Ulgen AI"
 NEXT_PUBLIC_CASPER_CHAIN_NAME="casper-test"
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 ```
@@ -251,7 +251,7 @@ Contributions are welcome! Please:
 3. Commit your changes following [Conventional Commits](https://www.conventionalcommits.org/)
 4. Open a Pull Request
 
-For bug reports and feature requests, please open a [GitHub Issue](https://github.com/your-username/sentinel-ai/issues).
+For bug reports and feature requests, please open a [GitHub Issue](https://github.com/furkanahmetk/ulgen-ai/issues).
 
 ---
 
