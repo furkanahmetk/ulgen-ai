@@ -74,8 +74,8 @@ Both contracts are deployed as **upgradeable** via Odra Framework 2.8.x — new 
 
 | Contract | Package Hash |
 |----------|-------------|
-| **Marketplace** | `hash-e3ec7d595fb6ce93e74cefb97e7996ad517311104693f0d4a85401adedf318fd` |
-| **InvestigationRegistry** | `hash-dbe7911c5d1885d8663973753bd3d427b4e3c57f41d47b195075d2224843c918` |
+| **Marketplace** | `hash-047acbebd87099f014e65c9902cb3b5e89a1796f8bf4af31e95fc4d2dce21699` |
+| **InvestigationRegistry** | `hash-8777fd6ba97b6c96994194d091237bc7c4b966864453350d34c471b3e74f1464` |
 
 🔗 [Marketplace TX on cspr.live](https://testnet.cspr.live/transaction/c4fe0bcd30c90a9b59071cb6237fa486c8d65cb443fecf53cb1ed3f31251f24b)  
 🔗 [InvestigationRegistry TX on cspr.live](https://testnet.cspr.live/transaction/a0dd9749c12fb4856116111e224ebd79bfd04d82b6a17d1b4cbe5788f233210f)
@@ -159,8 +159,8 @@ CSPR_TRADE_MCP_URL=https://mcp.cspr.trade/mcp
 X402_FACILITATOR_URL=https://x402-facilitator.cspr.cloud
 CASPER_NODE_URL=https://node.testnet.casper.network/rpc
 CASPER_CHAIN_NAME=casper-test
-MARKETPLACE_CONTRACT_HASH=hash-e3ec7d595fb6ce93e74cefb97e7996ad517311104693f0d4a85401adedf318fd
-REGISTRY_CONTRACT_HASH=hash-dbe7911c5d1885d8663973753bd3d427b4e3c57f41d47b195075d2224843c918
+MARKETPLACE_CONTRACT_HASH=hash-047acbebd87099f014e65c9902cb3b5e89a1796f8bf4af31e95fc4d2dce21699
+REGISTRY_CONTRACT_HASH=hash-8777fd6ba97b6c96994194d091237bc7c4b966864453350d34c471b3e74f1464
 AGENT_SECRET_KEY_PATH=./keys/secret_key.pem
 ```
 
