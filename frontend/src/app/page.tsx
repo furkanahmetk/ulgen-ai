@@ -48,7 +48,7 @@ export default function Home() {
         const SESSION_TIMEOUT = 1800000;
         const lastActive = localStorage.getItem('cspr_last_active');
         const now = Date.now();
-        
+
         if (lastActive && (now - parseInt(lastActive, 10) > SESSION_TIMEOUT)) {
           // Session expired
           window.csprclick.signOut();
@@ -56,7 +56,7 @@ export default function Home() {
           localStorage.removeItem('cspr_last_active');
           return;
         }
-        
+
         // Update session
         localStorage.setItem('cspr_last_active', now.toString());
         setActiveAccount({
@@ -94,11 +94,13 @@ export default function Home() {
     if (window.csprclick) {
       try {
         await window.csprclick.signIn();
-        // Give it a small delay for the SDK state to update, then sync manually
-        setTimeout(() => {
+        // Poll for the SDK state to update as user might take time to approve
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
           if (window.csprclick) {
             const account = window.csprclick.getActiveAccount();
             if (account?.public_key) {
+              clearInterval(checkInterval);
               localStorage.setItem('cspr_last_active', Date.now().toString());
               setActiveAccount({
                 address: account.public_key,
@@ -106,12 +108,44 @@ export default function Home() {
               });
             }
           }
+          attempts++;
+          if (attempts >= 120) {
+            clearInterval(checkInterval);
+          }
         }, 500);
       } catch (err) {
         console.error("Wallet connection failed:", err);
       }
     } else {
       alert('Casper Wallet SDK is loading, please try again in a moment.');
+    }
+  };
+
+  const changeWallet = async () => {
+    if (window.csprclick && activeAccount) {
+      try {
+        await window.csprclick.switchAccount(activeAccount.provider);
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+          if (window.csprclick) {
+            const account = window.csprclick.getActiveAccount();
+            if (account?.public_key && account.public_key !== activeAccount.address) {
+              clearInterval(checkInterval);
+              localStorage.setItem('cspr_last_active', Date.now().toString());
+              setActiveAccount({
+                address: account.public_key,
+                provider: account.provider || 'connected wallet'
+              });
+            }
+          }
+          attempts++;
+          if (attempts >= 120) {
+            clearInterval(checkInterval);
+          }
+        }, 500);
+      } catch (err) {
+        console.error("Wallet switch failed:", err);
+      }
     }
   };
 
@@ -158,10 +192,10 @@ export default function Home() {
     try {
       // 1. Construct the native Casper transfer for the Due Diligence fee
       logs.push(`💸 User: Requesting signature for ${feeEstimate.amount} CSPR Due Diligence fee...`);
-      
+
       // The deployer wallet address where fees go
-      const DESTINATION_WALLET = '0163d8A06Bab82776ec0fA0b38F1306e4E6a944468609AdF5c0F8F5Ad592Ef5d63'; 
-      
+      const DESTINATION_WALLET = '0163d8A06Bab82776ec0fA0b38F1306e4E6a944468609AdF5c0F8F5Ad592Ef5d63';
+
       const deployParams = new DeployUtil.DeployParams(
         CLPublicKey.fromHex(activeAccount.address),
         'casper-test',
@@ -179,17 +213,17 @@ export default function Home() {
       );
 
       // Standard payment for native transfer gas is 0.1 CSPR
-      const payment = DeployUtil.standardPayment(100_000_000); 
+      const payment = DeployUtil.standardPayment(100_000_000);
       const deploy = DeployUtil.makeDeploy(deployParams, transferDeployItem, payment);
       const deployJson = DeployUtil.deployToJson(deploy);
 
       // 2. Request user signature via CSPR.click
       const sendResult = await window.csprclick.send(deployJson, activeAccount.address);
-      
+
       if (!sendResult || !sendResult.deployHash) {
         throw new Error("Transaction was cancelled or failed to send.");
       }
-      
+
       const deployHash = sendResult.deployHash;
       setLogs((prev: string[]) => [...prev, `✅ User: Fee transaction sent! DeployHash: ${deployHash}`]);
       setLogs((prev: string[]) => [...prev, `⏳ Agent: Verifying on-chain fee payment before proceeding...`]);
@@ -200,7 +234,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, type, deployHash, userAddress: activeAccount.address, estimatedFee: feeEstimate.amount }),
       });
-      
+
       const data = await res.json();
 
       if (data.error) {
@@ -274,7 +308,7 @@ export default function Home() {
           </div>
           {activeAccount ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div 
+              <div
                 style={{
                   background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)',
                   borderRadius: '6px', padding: '6px 12px', fontSize: '12px', color: 'var(--success)',
@@ -299,7 +333,7 @@ export default function Home() {
                 <span>🔗 {activeAccount.address.substring(0, 8)}...{activeAccount.address.substring(activeAccount.address.length - 6)}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <button className="btn-connect" onClick={connectWallet} style={{ fontSize: '10px', padding: '4px 8px', minHeight: 'unset', height: '22px' }}>
+                <button className="btn-connect" onClick={changeWallet} style={{ fontSize: '10px', padding: '4px 8px', minHeight: 'unset', height: '22px' }}>
                   Change
                 </button>
                 <button className="btn-connect" onClick={disconnectWallet} style={{ fontSize: '10px', padding: '4px 8px', minHeight: 'unset', height: '22px', borderColor: 'var(--danger)', color: 'var(--danger)' }}>
@@ -442,13 +476,13 @@ export default function Home() {
           <div className="glass-card" style={{ padding: '24px', minHeight: '350px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: 'var(--accent)', fontSize: '14px' }}>◈</span>
-                  <h2 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
-                    Investigation Report
-                  </h2>
+                <span style={{ color: 'var(--accent)', fontSize: '14px' }}>◈</span>
+                <h2 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', margin: 0 }}>
+                  Investigation Report
+                </h2>
               </div>
               {result && (
-                <button 
+                <button
                   onClick={() => {
                     const mdContent = `
 # Ülgen AI - Investigation Report
