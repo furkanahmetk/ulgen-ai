@@ -34,5 +34,21 @@
     "jest-environment-jsdom": "^29.5.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@next/eslint-plugin-next": {
+      "brace-expansion": "2.1.2",
+      "glob": "10.5.0"
+    },
+    "@typescript-eslint/eslint-plugin": {
+      "brace-expansion": "2.1.2"
+    },
+    "@typescript-eslint/parser": {
+      "brace-expansion": "2.1.2"
+    },
+    "minimatch": {
+      "brace-expansion": "1.1.16"
+    },
+    "dompurify": "3.4.12"
   }
 }
