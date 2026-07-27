@@ -22,6 +22,15 @@ import { casperMCPTools } from './tools/casperMCP';
 import { csprTradeTools } from './tools/csprTradeMCP';
 import { x402Tools } from './tools/x402Payment';
 
+function isGithubUrl(urlString: string): boolean {
+    try {
+        const parsed = new URL(urlString);
+        return parsed.hostname === 'github.com' || parsed.hostname.endsWith('.github.com');
+    } catch {
+        return false;
+    }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -56,7 +65,7 @@ async function runInvestigation(target: string, type: string, deployHash: string
     // Calculate base LLM Cost (matches estimate-fee logic)
     let complexity = 5;
     if (type === 'DeFi' || type === 'DEX') complexity += 3;
-    if (target.includes('github.com')) complexity += 2;
+    if (isGithubUrl(target)) complexity += 2;
     const baseLlmCost = complexity * 5;
 
     // === STEP 0: Verify Fee Payment ===
@@ -399,7 +408,7 @@ app.post('/api/estimate-fee', async (req, res) => {
         // Base complexity score (1-10)
         let complexity = 5;
         if (type === 'DeFi' || type === 'DEX') complexity += 3;
-        if (url.includes('github.com')) complexity += 2;
+        if (isGithubUrl(url)) complexity += 2;
         
         // Base LLM Cost (mock 5 CSPR per complexity point)
         const baseLlmCost = complexity * 5;
